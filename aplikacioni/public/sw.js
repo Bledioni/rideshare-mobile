@@ -1,5 +1,5 @@
 // Kjo cache përmban VETËM dokumentin offline, ikonat dhe listën publike.
-const CACHE = "rideshare-public-v1";
+const CACHE = "rideshare-public-v2";
 const API = "/api/udhetimet";
 const SHELL = ["/offline.html", "/icons/icon-192.png", "/icons/icon-512.png"];
 

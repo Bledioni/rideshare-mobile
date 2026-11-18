@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ZgjedhVendtakimin } from "@/components/VendtakimiLokale";
 import { gjejUdhetimin } from "@/lib/udhetimet";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,8 @@ export default async function Detajet({
           Kërko vend
         </Link>
       ) : <button className="action" disabled>Nuk ka vende të lira</button>}
+      {/* Java 8: komponent klienti; leja kërkohet vetëm pas klikimit. */}
+      <ZgjedhVendtakimin />
     </main>
   );
 }

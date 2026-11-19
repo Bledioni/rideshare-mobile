@@ -106,3 +106,25 @@ export async function pranoKerkesen(kerkeseId: string, shoferId: string): Promis
   const rows = await sql`SELECT prano_kerkesen(${kerkeseId}::bigint, ${shoferId}) AS rezultati`;
   return rows[0].rezultati as RezultatiPranimit;
 }
+
+export type UdhetimiIm = {
+  id: string;
+  nisja: string;
+  destinacioni: string;
+  ora: string;
+  vende: number;
+  ne_pritje: number;
+};
+
+/** Udhëtimet ku shoferi i sesionit është pronar, me numrin e kërkesave në pritje. */
+export async function lexoUdhetimetEMia(shoferId: string): Promise<UdhetimiIm[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT u.id, u.nisja, u.destinacioni, u.ora, u.vende,
+      COUNT(k.id) FILTER (WHERE k.statusi = 'ne_pritje')::int AS ne_pritje
+    FROM udhetimet u LEFT JOIN kerkesat k ON k.udhetim_id = u.id
+    WHERE u.shofer_id = ${shoferId}
+    GROUP BY u.id ORDER BY u.ora, u.id
+  `;
+  return rows as UdhetimiIm[];
+}

@@ -125,7 +125,10 @@ export function GjendjaUdhetimit({ udhetimId }: { udhetimId: string }) {
             <ul>
               {kerkesat.map((k) => (
                 <li key={k.id}>
-                  <span>{k.udhetari} · <strong>{emriStatusit(k.statusi)}</strong></span>
+                  <span>
+                    Kërkesa e {k.udhetari} · <strong>{emriStatusit(k.statusi)}</strong>
+                    {k.statusi === "pranuar" && " · Pranimi u ruajt"}
+                  </span>
                   {k.statusi === "ne_pritje" && (
                     <button
                       className="button"

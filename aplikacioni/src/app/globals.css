@@ -52,3 +52,6 @@ main { max-width: 720px; margin: auto; padding: 24px; }
 .sync-message--error { color: #ff9b8a; }
 .sync-warning { padding: 8px 12px; border-radius: 8px; background: #4a3410; color: #ffd76a; }
 .sync-footer { color: #a9b6cc; font-size: 13px; }
+.my-trips { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.my-trips li { display: grid; gap: 2px; }
+.my-trips span { color: #a9b6cc; font-size: 14px; }

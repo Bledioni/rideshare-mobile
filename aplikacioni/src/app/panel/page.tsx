@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Hyrja from "@/components/Hyrja";
 import { profiliIm } from "@/lib/lejet";
+import { lexoUdhetimetEMia, type UdhetimiIm } from "@/lib/kerkesat";
 import { ruajOren } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,11 @@ export default async function Panel({ searchParams }: {
 }) {
   const { m } = await searchParams;
   let p;
-  try { p = await profiliIm(); }
+  let teMiat: UdhetimiIm[] = [];
+  try {
+    p = await profiliIm();
+    if (p?.roli === "shofer") teMiat = await lexoUdhetimetEMia(p.id);
+  }
   catch { return <main className="app-shell"><h1>Paneli im</h1><p role="alert">{mesazhet.databaza}</p><Link href="/panel">Provo përsëri</Link></main>; }
   return <main className="app-shell">
     <h1>Paneli im</h1>
@@ -27,6 +32,15 @@ export default async function Panel({ searchParams }: {
       <p>ID ime GitHub: <code>{p.id}</code></p>
     </>}
     <Hyrja brenda={Boolean(p)} />
+    {p?.roli === "shofer" && <section className="sync-card">
+      <h2>Udhëtimet e mia</h2>
+      {teMiat.length === 0 ? <p>Nuk ke ende udhëtime.</p> : <ul className="my-trips">
+        {teMiat.map((u) => <li key={u.id}>
+          <Link href={`/udhetimi/${u.id}`}>Udhëtimi {u.id} · {u.nisja} → {u.destinacioni} · {u.ora}</Link>
+          <span>Vende të lira: {u.vende} · Kërkesa në pritje: <strong>{u.ne_pritje}</strong></span>
+        </li>)}
+      </ul>}
+    </section>}
     {p?.roli === "shofer" ? <form action={ruajOren}>
       <h2>Ndrysho orën e udhëtimit tim</h2>
       <input type="hidden" name="id" value="2" />

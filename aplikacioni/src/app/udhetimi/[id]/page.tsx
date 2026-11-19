@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { GjendjaUdhetimit } from "@/components/GjendjaUdhetimit";
 import { ZgjedhVendtakimin } from "@/components/VendtakimiLokale";
 import { gjejUdhetimin } from "@/lib/udhetimet";
 
@@ -29,12 +30,8 @@ export default async function Detajet({
       <h1>{udhetim.nisja} – {udhetim.destinacioni}</h1>
       <p>Ora: {udhetim.ora}</p>
       <p>Vendtakimi: {udhetim.vendtakimi}</p>
-      <p>Vende të lira: {udhetim.vende}</p>
-      {udhetim.vende > 0 ? (
-        <Link className="action" href={`/udhetimi/${id}/kerkesa`}>
-          Kërko vend
-        </Link>
-      ) : <button className="action" disabled>Nuk ka vende të lira</button>}
+      {/* Java 10: vendet, kërkesa dhe pranimi rilexohen nga serveri çdo 5 sekonda. */}
+      <GjendjaUdhetimit udhetimId={udhetim.id} />
       {/* Java 8: komponent klienti; leja kërkohet vetëm pas klikimit. */}
       <ZgjedhVendtakimin />
     </main>

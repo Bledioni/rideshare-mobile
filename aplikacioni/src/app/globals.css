@@ -35,3 +35,20 @@ main { max-width: 720px; margin: auto; padding: 24px; }
 .button:disabled { opacity: 0.6; cursor: wait; }
 .meeting-picker__message { min-height: 1.4em; }
 .meeting-picker__message--error { color: #ff9b8a; }
+
+/* Java 10 · dy ekrane, një gjendje */
+.sync-card { display: grid; gap: 12px; margin: 20px 0; padding: 18px;
+  border: 1px solid #8090aa; border-radius: 12px; }
+.sync-card h2, .sync-card h3, .sync-card p { margin: 0; }
+.sync-role { color: #89ddff; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.sync-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.sync-grid dt { color: #a9b6cc; font-size: 13px; }
+.sync-grid dd { margin: 0; font-weight: 600; }
+.sync-seats { font-size: 24px; }
+.sync-requests { display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid #2a3650; }
+.sync-requests ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sync-requests li { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.sync-message { color: #9be7b0; }
+.sync-message--error { color: #ff9b8a; }
+.sync-warning { padding: 8px 12px; border-radius: 8px; background: #4a3410; color: #ffd76a; }
+.sync-footer { color: #a9b6cc; font-size: 13px; }

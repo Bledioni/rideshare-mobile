@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 
 type StatusiKerkeses = "ne_pritje" | "pranuar";
 type Gjendja = {
-  udhetim: { id: string; nisja: string; destinacioni: string; ora: string; vende: number; shoferi: string | null };
+  udhetim: {
+    id: string; nisja: string; destinacioni: string; ora: string;
+    vendtakimi: string; vende: number; shoferi: string | null;
+  };
   roli: "shofer" | "udhetar" | "mysafir";
   kerkesaIme: { id: string; statusi: StatusiKerkeses } | null;
   kerkesat: { id: string; udhetari: string; statusi: StatusiKerkeses }[];
@@ -25,6 +28,7 @@ export function GjendjaUdhetimit({ udhetimId }: { udhetimId: string }) {
   const [offline, setOffline] = useState(false);
   const [duke, setDuke] = useState<string | null>(null); // veprimi në pritje
   const [mesazhi, setMesazhi] = useState<{ tekst: string; gabim: boolean } | null>(null);
+  const [vendtakimiNdryshoi, setVendtakimiNdryshoi] = useState(false);
 
   // Thirret pas një veprimi ose rikthimi të rrjetit për të lexuar menjëherë.
   const lexoTani = useRef<() => void>(() => {});
@@ -34,6 +38,7 @@ export function GjendjaUdhetimit({ udhetimId }: { udhetimId: string }) {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let kontrolli: AbortController | null = null;
     let numeruesi = 0; // përgjigjet e vjetruara injorohen
+    let vendtakimiIFundit: string | null = null;
 
     async function lexo() {
       if (timer) clearTimeout(timer);
@@ -49,6 +54,11 @@ export function GjendjaUdhetimit({ udhetimId }: { udhetimId: string }) {
         if (!res.ok) throw new Error(String(res.status));
         const data = (await res.json()) as Gjendja;
         if (aktiv && nr === numeruesi) {
+          // Udhëtari njoftohet kur shoferi e ndryshon vendtakimin.
+          if (vendtakimiIFundit !== null && vendtakimiIFundit !== data.udhetim.vendtakimi) {
+            setVendtakimiNdryshoi(true);
+          }
+          vendtakimiIFundit = data.udhetim.vendtakimi;
           setGjendja(data);
           setOffline(false); // paralajmërimi hiqet vetëm pas suksesit
         }
@@ -65,9 +75,12 @@ export function GjendjaUdhetimit({ udhetimId }: { udhetimId: string }) {
     // Pas rikthimit të rrjetit, lexo menjëherë pa pritur timer-in.
     const neRikthim = () => void lexo();
     window.addEventListener("online", neRikthim);
+    // Pas një ndryshimi në këtë dritare (p.sh. vendtakimi), lexo menjëherë.
+    window.addEventListener("rideshare:rilexo", neRikthim);
     return () => {
       aktiv = false;
       window.removeEventListener("online", neRikthim);
+      window.removeEventListener("rideshare:rilexo", neRikthim);
       if (timer) clearTimeout(timer);
       kontrolli?.abort();
       lexoTani.current = () => {};
@@ -107,27 +120,46 @@ export function GjendjaUdhetimit({ udhetimId }: { udhetimId: string }) {
 
   return (
     <section className="sync-card" aria-live="polite">
-      <p className="sync-role">
-        {roli === "shofer" ? "Shofer" : roli === "udhetar" ? "Udhëtar" : "Mysafir"}
-      </p>
-      <h2>Udhëtimi {udhetim.id} · {udhetim.nisja} → {udhetim.destinacioni}</h2>
+      <div className="sync-card__head">
+        <h2>Gjendja e udhëtimit</h2>
+        <span className="sync-role">
+          {roli === "shofer" ? "Ti je shoferi" : roli === "udhetar" ? "Udhëtar" : "Mysafir"}
+        </span>
+      </div>
       <dl className="sync-grid">
         <div><dt>Nisja</dt><dd>{udhetim.ora}</dd></div>
         <div><dt>Shoferi</dt><dd>{udhetim.shoferi ?? "—"}</dd></div>
         <div><dt>Vende të lira</dt><dd className="sync-seats">{udhetim.vende}</dd></div>
-        <div><dt>Statusi</dt><dd>{udhetim.vende > 0 ? "Aktiv" : "Plot"}</dd></div>
+        <div><dt>Statusi</dt><dd>
+          <span className={udhetim.vende > 0 ? "badge badge--success" : "badge badge--muted"}>
+            {udhetim.vende > 0 ? "Aktiv" : "Plot"}
+          </span>
+        </dd></div>
+        <div className="sync-grid__wide"><dt>Vendtakimi</dt><dd>📍 {udhetim.vendtakimi}</dd></div>
       </dl>
+
+      {vendtakimiNdryshoi && roli !== "shofer" && (
+        <p className="sync-notice" role="status">
+          Shoferi e ndryshoi vendtakimin: <strong>{udhetim.vendtakimi}</strong>{" "}
+          <button className="sync-notice__close" onClick={() => setVendtakimiNdryshoi(false)}>OK</button>
+        </p>
+      )}
 
       {roli === "shofer" && (
         <div className="sync-requests">
-          <h3>Kërkesat</h3>
+          <h3>Kërkesat <span className="badge">{kerkesat.length}</span></h3>
           {kerkesat.length === 0 ? <p>Ende pa kërkesë.</p> : (
             <ul>
               {kerkesat.map((k) => (
                 <li key={k.id}>
-                  <span>
-                    Kërkesa e {k.udhetari} · <strong>{emriStatusit(k.statusi)}</strong>
-                    {k.statusi === "pranuar" && " · Pranimi u ruajt"}
+                  <span className="request">
+                    <span className="avatar" aria-hidden>{k.udhetari.charAt(0).toUpperCase()}</span>
+                    <span>
+                      <strong>{k.udhetari}</strong>
+                      <span className={k.statusi === "pranuar" ? "badge badge--success" : "badge badge--warning"}>
+                        {emriStatusit(k.statusi)}
+                      </span>
+                    </span>
                   </span>
                   {k.statusi === "ne_pritje" && (
                     <button
@@ -149,13 +181,17 @@ export function GjendjaUdhetimit({ udhetimId }: { udhetimId: string }) {
         <div className="sync-requests">
           <h3>Kërkesa ime</h3>
           {kerkesaIme ? (
-            <p>
-              <strong>{emriStatusit(kerkesaIme.statusi)}</strong>{" · "}
-              {kerkesaIme.statusi === "pranuar" ? "Vendi u konfirmua." : "Kërkesa u dërgua."}
+            <p className="request">
+              <span className={kerkesaIme.statusi === "pranuar" ? "badge badge--success" : "badge badge--warning"}>
+                {emriStatusit(kerkesaIme.statusi)}
+              </span>
+              {kerkesaIme.statusi === "pranuar"
+                ? "Vendi u konfirmua. Shihemi te vendtakimi!"
+                : "Kërkesa u dërgua. Do të njoftohesh kur shoferi ta pranojë."}
             </p>
           ) : (
             <>
-              <p>Pa kërkesë.</p>
+              <p className="muted">Ende nuk ke kërkuar vend në këtë udhëtim.</p>
               <button
                 className="button"
                 disabled={bllokuar || udhetim.vende <= 0}
@@ -168,7 +204,11 @@ export function GjendjaUdhetimit({ udhetimId }: { udhetimId: string }) {
         </div>
       )}
 
-      {roli === "mysafir" && <p>Hyr nga <a href="/panel">Paneli im</a> për të kërkuar vend.</p>}
+      {roli === "mysafir" && (
+        <p className="sync-requests muted">
+          Hyr nga <a href="/panel">Paneli im</a> për të kërkuar vend.
+        </p>
+      )}
 
       {mesazhi && (
         <p className={mesazhi.gabim ? "sync-message sync-message--error" : "sync-message"} role="status">
@@ -182,7 +222,7 @@ export function GjendjaUdhetimit({ udhetimId }: { udhetimId: string }) {
         </p>
       ) : (
         <p className="sync-footer">
-          Gjendja u lexua nga serveri · {new Date(gjendja.lexuarMe).toLocaleTimeString("sq-AL")} ·
+          <span className="live-dot" aria-hidden /> Gjendja u lexua nga serveri · {new Date(gjendja.lexuarMe).toLocaleTimeString("sq-AL")} ·
           përditësim automatik çdo 5 sekonda
         </p>
       )}

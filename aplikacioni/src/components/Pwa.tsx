@@ -18,8 +18,9 @@ export default function Pwa() {
       navigator.serviceWorker.removeEventListener("controllerchange", warmSnapshot);
     };
   }, []);
-  return <aside style={{ padding: "1rem" }}>
+  return <footer className="site-footer">
     <a href="/offline.html">Lista për lexim pa internet</a>
     <p>Kopja e ruajtur mund të jetë e vjetër. Këtu nuk konfirmohen rezervime.</p>
-  </aside>;
+    <p>RideShare AAB · projekt studentor</p>
+  </footer>;
 }

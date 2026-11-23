@@ -86,8 +86,8 @@ export function ListaUdhetimesh({
   return (
     <>
       <div className="favorite-summary" aria-live="polite">
-        <strong>Të preferuarat</strong>
-        <span>
+        <strong>★ Të preferuarat</strong>
+        <span className="badge">
           {eshteKycur && !gabimNeLexim ? preferimet.size : "—"}
         </span>
         <small>Preferim personal · jo rezervim</small>

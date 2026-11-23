@@ -9,6 +9,7 @@ export type GjendjaUdhetimit = {
     nisja: string;
     destinacioni: string;
     ora: string;
+    vendtakimi: string;
     vende: number;
     shoferi: string | null;
   };
@@ -30,7 +31,7 @@ export async function lexoGjendjen(
 ): Promise<GjendjaUdhetimit | null> {
   const sql = getSql();
   const rows = await sql`
-    SELECT u.id, u.nisja, u.destinacioni, u.ora, u.vende, u.shofer_id, p.emri AS shoferi
+    SELECT u.id, u.nisja, u.destinacioni, u.ora, u.vendtakimi, u.vende, u.shofer_id, p.emri AS shoferi
     FROM udhetimet u LEFT JOIN profilet p ON p.github_id = u.shofer_id
     WHERE u.id = ${udhetimId}
   `;
@@ -43,6 +44,7 @@ export async function lexoGjendjen(
       nisja: u.nisja,
       destinacioni: u.destinacioni,
       ora: u.ora,
+      vendtakimi: u.vendtakimi,
       vende: Number(u.vende),
       shoferi: u.shoferi ?? null,
     },
@@ -127,4 +129,87 @@ export async function lexoUdhetimetEMia(shoferId: string): Promise<UdhetimiIm[]>
     GROUP BY u.id ORDER BY u.ora, u.id
   `;
   return rows as UdhetimiIm[];
+}
+
+export const VENDTAKIMI_MAX = 100;
+
+/** Vetëm shoferi pronar (nga sesioni) e ndryshon vendtakimin e udhëtimit të vet. */
+export async function ndryshoVendtakimin(
+  udhetimId: string,
+  shoferId: string,
+  vendtakimi: string,
+): Promise<"ruajtur" | "ndaluar" | "fushe"> {
+  const v = vendtakimi.trim();
+  if (!v || v.length > VENDTAKIMI_MAX) return "fushe";
+  const sql = getSql();
+  const rows = await sql`
+    UPDATE udhetimet SET vendtakimi = ${v}
+    WHERE id = ${udhetimId} AND shofer_id = ${shoferId}
+    RETURNING id
+  `;
+  return rows.length === 1 ? "ruajtur" : "ndaluar";
+}
+
+export type Njoftim = {
+  id: string; // unik për llojin + kërkesën
+  lloji: "kerkese_e_re" | "kerkese_pranuar";
+  udhetimId: string;
+  nisja: string;
+  destinacioni: string;
+  ora: string;
+  udhetari?: string;
+  shoferi?: string;
+  koha: string;
+};
+
+/**
+ * Njoftimet për sesionin aktual:
+ * - shoferi: kërkesat në pritje te udhëtimet e veta;
+ * - udhëtari: kërkesat e veta që u pranuan.
+ * Klienti mban mend cilat i ka shfaqur; serveri vetëm lexon.
+ */
+export async function lexoNjoftimet(githubId: string): Promise<Njoftim[]> {
+  const sql = getSql();
+  const [teReja, tePranuara] = await Promise.all([
+    sql`
+      SELECT k.id, k.udhetim_id, u.nisja, u.destinacioni, u.ora, k.krijuar_me,
+        COALESCE(p.emri, 'Udhëtar') AS udhetari
+      FROM kerkesat k
+      JOIN udhetimet u ON u.id = k.udhetim_id
+      LEFT JOIN profilet p ON p.github_id = k.udhetar_id
+      WHERE u.shofer_id = ${githubId} AND k.statusi = 'ne_pritje'
+      ORDER BY k.krijuar_me DESC LIMIT 20
+    `,
+    sql`
+      SELECT k.id, k.udhetim_id, u.nisja, u.destinacioni, u.ora, k.ndryshuar_me,
+        COALESCE(p.emri, 'Shoferi') AS shoferi
+      FROM kerkesat k
+      JOIN udhetimet u ON u.id = k.udhetim_id
+      LEFT JOIN profilet p ON p.github_id = u.shofer_id
+      WHERE k.udhetar_id = ${githubId} AND k.statusi = 'pranuar'
+      ORDER BY k.ndryshuar_me DESC LIMIT 20
+    `,
+  ]);
+  return [
+    ...teReja.map((k): Njoftim => ({
+      id: `kerkese-${k.id}`,
+      lloji: "kerkese_e_re",
+      udhetimId: String(k.udhetim_id),
+      nisja: k.nisja,
+      destinacioni: k.destinacioni,
+      ora: k.ora,
+      udhetari: k.udhetari,
+      koha: new Date(k.krijuar_me).toISOString(),
+    })),
+    ...tePranuara.map((k): Njoftim => ({
+      id: `pranuar-${k.id}`,
+      lloji: "kerkese_pranuar",
+      udhetimId: String(k.udhetim_id),
+      nisja: k.nisja,
+      destinacioni: k.destinacioni,
+      ora: k.ora,
+      shoferi: k.shoferi,
+      koha: new Date(k.ndryshuar_me).toISOString(),
+    })),
+  ];
 }

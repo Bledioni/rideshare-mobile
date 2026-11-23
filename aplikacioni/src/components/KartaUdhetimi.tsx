@@ -40,20 +40,28 @@ export function KartaUdhetimi({
           : "Preferimet u lexuan nga serveri."
         : "Nuk është te të preferuarat.");
 
+  const plot = udhetim.vende <= 0;
   return (
     <article className="trip-card">
-      <h2>{udhetim.nisja} – {udhetim.destinacioni}</h2>
-      <p>
-        Ora: {udhetim.ora} ·{" "}
-        {udhetim.vende > 0 ? `Vende të lira: ${udhetim.vende}` : "Nuk ka vende të lira"}
-      </p>
-      <Link className="action" href={`/udhetimi/${udhetim.id}`}>
-        Shiko detajet
-      </Link>
-      <div className="favorite-control">
+      <div className="trip-card__top">
+        <span className="trip-card__time">{udhetim.ora}</span>
+        <span className={plot ? "badge badge--muted" : "badge badge--success"}>
+          {plot ? "Plot" : `${udhetim.vende} ${udhetim.vende === 1 ? "vend i lirë" : "vende të lira"}`}
+        </span>
+      </div>
+      <h3 className="trip-card__route">
+        <span>{udhetim.nisja}</span>
+        <span className="trip-card__arrow" aria-hidden>→</span>
+        <span>{udhetim.destinacioni}</span>
+      </h3>
+      <p className="trip-card__meta">📍 {udhetim.vendtakimi}</p>
+      <div className="trip-card__actions">
+        <Link className="button button--sm" href={`/udhetimi/${udhetim.id}`}>
+          Shiko detajet
+        </Link>
         {eshteKycur ? (
           <button
-            className="favorite-button"
+            className={eshtePreferuar ? "favorite-button favorite-button--on" : "favorite-button"}
             type="button"
             onClick={() => void ruaj(udhetim.id)}
             disabled={eshtePreferuar || eshteNePritje || ruajtjaNukEshteGati}
@@ -62,18 +70,18 @@ export function KartaUdhetimi({
           </button>
         ) : (
           <Link className="favorite-button" href="/panel">
-            Hyr me GitHub për të ruajtur
+            Hyr për të ruajtur
           </Link>
         )}
-        {eshteKycur && (
-          <p
-            className={gabimi ? "favorite-message favorite-message--error" : "favorite-message"}
-            aria-live="polite"
-          >
-            {mesazhi}
-          </p>
-        )}
       </div>
+      {eshteKycur && (
+        <p
+          className={gabimi ? "favorite-message favorite-message--error" : "favorite-message"}
+          aria-live="polite"
+        >
+          {mesazhi}
+        </p>
+      )}
     </article>
   );
 }

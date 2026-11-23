@@ -15,10 +15,14 @@ export default async function Home() {
   } catch {
     return (
       <main>
-        <h1>RideShare</h1>
-        <p><Link href="/panel">Hyr / Paneli im</Link></p>
-        <p role="alert">Nuk u lidhëm me databazën. Provo përsëri.</p>
-        <a className="action" href="/">Provo përsëri</a>
+        <section className="empty-state">
+          <h1>Diçka nuk shkoi mirë</h1>
+          <p role="alert">Nuk u lidhëm me databazën. Provo përsëri.</p>
+          <div className="row">
+            <a className="button" href="/">Provo përsëri</a>
+            <Link className="button button--ghost" href="/panel">Paneli im</Link>
+          </div>
+        </section>
       </main>
     );
   }
@@ -41,11 +45,27 @@ export default async function Home() {
 
   return (
     <main>
-      <h1>RideShare · Udhëtimet për AAB</h1>
-      <p><Link href="/panel">Hyr / Paneli im</Link></p>
-      <p>Burimi: Neon · të dhëna fiktive për ushtrime</p>
+      <section className="hero">
+        <p className="eyebrow">Udhëtime të përbashkëta · AAB</p>
+        <h1>Gjej një vend për në universitet.</h1>
+        <p className="hero__lead">
+          Shoferët publikojnë udhëtimet, udhëtarët kërkojnë vend dhe të dy njoftohen
+          menjëherë kur kërkesa dërgohet ose pranohet.
+        </p>
+        <div className="row">
+          <a className="button" href="#udhetimet">Shiko udhëtimet</a>
+          <Link className="button button--ghost" href="/panel">
+            {eshteKycur ? "Paneli im" : "Hyr me GitHub"}
+          </Link>
+        </div>
+      </section>
+
+      <div className="section-head" id="udhetimet">
+        <h2>Udhëtimet e disponueshme</h2>
+        <span className="muted small">{udhetimet.length} udhëtime · të dhëna fiktive për ushtrime</span>
+      </div>
       {udhetimet.length === 0 ? (
-        <p>Nuk ka udhëtime për momentin.</p>
+        <p className="empty-state">Nuk ka udhëtime për momentin.</p>
       ) : (
         <ListaUdhetimesh
           udhetimet={udhetimet}

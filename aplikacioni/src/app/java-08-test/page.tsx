@@ -15,7 +15,7 @@ export default function Java08Test() {
   const u = udhetimiFiktiv;
   return (
     <main>
-      <Link href="/">← Kthehu te lista</Link>
+      <Link className="back-link" href="/">← Kthehu te lista</Link>
       <h1>{u.nisja} – {u.destinacioni}</h1>
       <p>Shoferi: {u.shoferi} (fiktiv)</p>
       <p>Ora: {u.ora}</p>

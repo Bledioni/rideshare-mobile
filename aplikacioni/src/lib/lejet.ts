@@ -30,3 +30,52 @@ export async function ndryshoOren(id: string, ora: string) {
     RETURNING id`;
   return rows.length === 1 ? "ruajtur" : "ndaluar";
 }
+
+export type FushatEUdhetimit = {
+  nisja: string;
+  destinacioni: string;
+  ora: string;
+  vendtakimi: string;
+  vende: number;
+};
+
+/** Validimi bëhet në server; formulari mund të anashkalohet. */
+export function validoUdhetimin(f: FormData): FushatEUdhetimit | null {
+  const tekst = (k: string) => String(f.get(k) ?? "").trim();
+  const nisja = tekst("nisja");
+  const destinacioni = tekst("destinacioni");
+  const ora = tekst("ora");
+  const vendtakimi = tekst("vendtakimi");
+  const vende = Number(tekst("vende"));
+  const okTekst = (s: string) => s.length >= 2 && s.length <= 60;
+  if (!okTekst(nisja) || !okTekst(destinacioni) || !okTekst(vendtakimi)) return null;
+  if (!/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(ora)) return null;
+  if (!Number.isInteger(vende) || vende < 1 || vende > 8) return null;
+  return { nisja, destinacioni, ora, vendtakimi, vende };
+}
+
+/** Shoferi krijon një udhëtim të ri. Pronari vjen nga sesioni, jo nga formulari. */
+export async function krijoUdhetimin(f: FormData): Promise<{ rezultati: string; id?: string }> {
+  const p = await profiliIm();
+  if (!p) return { rezultati: "hyr" };
+  if (p.roli !== "shofer") return { rezultati: "ndaluar" };
+  const u = validoUdhetimin(f);
+  if (!u) return { rezultati: "fushe_udhetimi" };
+  const sql = getSql();
+  // ID-të janë tekst numerik; merret numri i radhës. Nëse dy shoferë krijojnë njëkohësisht,
+  // çelësi primar e refuzon të dytin dhe provojmë edhe një herë.
+  for (let prova = 0; prova < 3; prova++) {
+    try {
+      const rows = await sql`
+        INSERT INTO udhetimet (id, nisja, destinacioni, ora, vendtakimi, vende, shofer_id)
+        SELECT (COALESCE(MAX(id::int) FILTER (WHERE id ~ '^[0-9]+$'), 0) + 1)::text,
+               ${u.nisja}, ${u.destinacioni}, ${u.ora}, ${u.vendtakimi}, ${u.vende}, ${p.id}
+        FROM udhetimet
+        RETURNING id`;
+      return { rezultati: "krijuar", id: String(rows[0].id) };
+    } catch (e) {
+      if ((e as { code?: string }).code !== "23505" || prova === 2) throw e;
+    }
+  }
+  return { rezultati: "databaza" };
+}

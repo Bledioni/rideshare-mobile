@@ -10,9 +10,19 @@ type GjendjaVendndodhjes =
   | "timeout"
   | "unavailable";
 
-export function ZgjedhVendtakimin() {
+/**
+ * Pa `udhetimId` (Java 8): zgjedhja mbetet vetëm në këtë pajisje.
+ * Me `udhetimId` (Java 10, shoferi pronar): vendtakimi ruhet në server dhe
+ * udhëtari e merr me leximin automatik çdo 5 sekonda.
+ */
+export function ZgjedhVendtakimin({
+  udhetimId,
+  fillestar = "",
+}: { udhetimId?: string; fillestar?: string } = {}) {
   const [teksti, setTeksti] = useState("");
-  const [vendtakimi, setVendtakimi] = useState("");
+  const [vendtakimi, setVendtakimi] = useState(fillestar);
+  const [dukeRuajtur, setDukeRuajtur] = useState(false);
+  const [mesazhiRuajtjes, setMesazhiRuajtjes] = useState("");
   const [gabimiTekstit, setGabimiTekstit] = useState("");
   const [gjendja, setGjendja] = useState<GjendjaVendndodhjes>("idle");
   const [mesazhi, setMesazhi] = useState("");
@@ -25,8 +35,41 @@ export function ZgjedhVendtakimin() {
       return;
     }
 
-    setVendtakimi(tekstIStervitur);
     setGabimiTekstit("");
+    if (!udhetimId) {
+      setVendtakimi(tekstIStervitur);
+      return;
+    }
+    void ruajNeServer(tekstIStervitur);
+  }
+
+  async function ruajNeServer(vendi: string) {
+    setDukeRuajtur(true);
+    setMesazhiRuajtjes("Po ruhet në server…");
+    try {
+      const res = await fetch(`/api/udhetimet/${encodeURIComponent(udhetimId!)}/vendtakimi`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vendtakimi: vendi }),
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setGabimiTekstit(data.error ?? "Vendtakimi nuk u ruajt. Provo përsëri.");
+        setMesazhiRuajtjes("");
+        return;
+      }
+      // Konfirmohet vetëm pasi serveri e ruan.
+      setVendtakimi(data.vendtakimi ?? vendi);
+      setTeksti("");
+      setMesazhiRuajtjes(data.mesazhi ?? "Vendtakimi u ruajt.");
+      window.dispatchEvent(new Event("rideshare:rilexo"));
+    } catch {
+      setGabimiTekstit("Nuk u lidhëm me serverin. Vendtakimi nuk u ruajt.");
+      setMesazhiRuajtjes("");
+    } finally {
+      setDukeRuajtur(false);
+    }
   }
 
   function lexoVendndodhjen() {
@@ -68,7 +111,9 @@ export function ZgjedhVendtakimin() {
       <h2 id="meeting-picker-title">Zgjedh vendtakimin</h2>
       <p className="meeting-picker__intro">
         Shkruaj një vend të dallueshëm ose provo vendndodhjen e telefonit.
-        Zgjedhja mbetet në këtë pajisje.
+        {udhetimId
+          ? " Pas konfirmimit ruhet në server dhe udhëtari e sheh pa Refresh."
+          : " Zgjedhja mbetet në këtë pajisje."}
       </p>
 
       <label htmlFor="meeting-input">Shkruaj vendtakimin</label>
@@ -91,8 +136,9 @@ export function ZgjedhVendtakimin() {
           data-testid="confirm-meeting"
           type="button"
           onClick={konfirmoVendtakimin}
+          disabled={dukeRuajtur}
         >
-          Konfirmo në telefon
+          {udhetimId ? (dukeRuajtur ? "Po ruhet…" : "Konfirmo dhe dërgo te udhëtari") : "Konfirmo në telefon"}
         </button>
         <button
           className="button button--outline"
@@ -111,6 +157,9 @@ export function ZgjedhVendtakimin() {
           {vendtakimi || "Asnjë ende"}
         </strong>
       </p>
+      {udhetimId && mesazhiRuajtjes && (
+        <p className="meeting-picker__message" role="status">{mesazhiRuajtjes}</p>
+      )}
       <p
         className="meeting-picker__message meeting-picker__message--error"
         data-testid="meeting-error"
